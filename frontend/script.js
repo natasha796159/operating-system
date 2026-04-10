@@ -100,6 +100,28 @@ function setupEventListeners() {
         document.documentElement.setAttribute('data-theme', newTh);
         localStorage.setItem('omniwatch_theme', newTh);
     });
+
+    // Speedtest Action
+    const btnSpeed = document.getElementById('btn-speedtest');
+    if (btnSpeed) {
+        btnSpeed.addEventListener('click', async () => {
+            btnSpeed.textContent = "Testing...";
+            btnSpeed.disabled = true;
+            try {
+                const res = await fetch('/api/speedtest');
+                const result = await res.json();
+                if (result.success) {
+                    showToast(`Speedtest Done!\nDownload: ${formatBytes(result.download)}/s\nUpload: ${formatBytes(result.upload)}/s`, 'success');
+                } else {
+                    showToast(`Speedtest failed: ${result.error}`, 'danger');
+                }
+            } catch (err) {
+                showToast(`Unable to run test. Server not responding.`, 'danger');
+            }
+            btnSpeed.textContent = "Run Speedtest";
+            btnSpeed.disabled = false;
+        });
+    }
 }
 
 function setupTheme() {

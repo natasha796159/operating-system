@@ -20,6 +20,13 @@ for proc in psutil.process_iter():
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, public, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory(app.static_folder, path)
@@ -31,6 +38,23 @@ def api_system():
 @app.route('/api/processes')
 def api_processes():
     return jsonify(get_all_processes())
+
+@app.route('/api/speedtest')
+def api_speedtest():
+    try:
+        import speedtest
+        st = speedtest.Speedtest()
+        st.get_best_server()
+        dl = st.download()
+        ul = st.upload()
+        return jsonify({
+            'success': True,
+            'download': dl,
+            'upload': ul,
+            'ping': st.results.ping
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/kill/<int:pid>', methods=['POST'])
 def api_kill(pid):

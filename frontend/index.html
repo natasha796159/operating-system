@@ -85,7 +85,10 @@
                             <div style="font-size: 0.85rem; font-weight: 600; color: var(--success);"><span id="val-net-down">0 KB/s</span> &#8595;</div>
                         </div>
                     </div>
-                    <div class="disk-info" style="margin-top: 0; margin-bottom: 10px; color: var(--text-muted); text-align: left;">Live Speed</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span class="disk-info" style="color: var(--text-muted);">Live Active OS Stream</span>
+                        <button id="btn-speedtest" class="btn-kill" style="color: var(--text-main); border-color: var(--border);">Run Speedtest</button>
+                    </div>
                     <canvas id="graph-net" width="300" height="60"></canvas>
                 </div>
 
