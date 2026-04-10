@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniWatch | Real-Time Process Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <header class="header">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <h1>OmniWatch</h1>
+        </div>
+        <div class="header-controls">
+            <span id="uptime">Loading uptime...</span>
+            <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme">
+                <svg id="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- AI Insights Banner -->
+        <div class="insights-banner" id="insights-banner" style="display: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span id="insight-text">System running optimally.</span>
+        </div>
+
+        <!-- System Resources -->
+        <section class="stats-grid">
+            <div class="stat-card" id="card-cpu">
+                <div class="stat-header">
+                    <h2>CPU Usage</h2>
+                    <span class="stat-value" id="val-cpu">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="bar-cpu"></div></div>
+                <canvas id="graph-cpu" width="300" height="60"></canvas>
+            </div>
+            
+            <div class="stat-card" id="card-mem">
+                <div class="stat-header">
+                    <h2>Memory Usage</h2>
+                    <span class="stat-value" id="val-mem">0%</span>
+                </div>
+                <div class="memory-details">
+                    <div class="mem-row"><span>Actual Used:</span> <strong id="mem-true">0 GB</strong></div>
+                    <div class="mem-row"><span>Cached (Reusable):</span> <strong id="mem-cached">0 GB</strong></div>
+                    <div class="mem-row"><span>Available:</span> <strong id="mem-avail">0 GB</strong></div>
+                </div>
+                <div class="progress-bar" style="margin-top: 10px; margin-bottom: 5px;"><div class="progress-fill" id="bar-mem"></div></div>
+                <div class="disk-info" id="mem-status" style="margin-top: 0; margin-bottom: 10px; color: var(--accent);">Checking status...</div>
+                <canvas id="graph-mem" width="300" height="60"></canvas>
+            </div>
+
+            <div class="stat-card" id="card-disk">
+                <div class="stat-header">
+                    <h2>Disk Usage</h2>
+                    <span class="stat-value" id="val-disk">0 GB / 0 GB (0%)</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="bar-disk"></div></div>
+                <div class="disk-info">Monitoring root filesystem</div>
+            </div>
+        </section>
+
+        <!-- Process Manager -->
+        <section class="process-section">
+            <div class="process-header">
+                <h2>Running Processes (<span id="proc-count">0</span>)</h2>
+                <div class="process-controls">
+                    <input type="text" id="search-input" placeholder="Search by name or PID..." autocomplete="off">
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="process-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="pid">PID</th>
+                            <th data-sort="name">Process Name</th>
+                            <th data-sort="cpu_percent" class="active-sort">CPU %</th>
+                            <th data-sort="memory_percent">Memory %</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="process-list">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
