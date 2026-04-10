@@ -3,6 +3,24 @@ cd /d "%~dp0"
 echo ==========================================
 echo    OmniWatch - Process Dashboard
 echo ==========================================
+
+IF NOT EXIST "backend\requirements.txt" (
+    echo.
+    echo ==========================================
+    echo [CRITICAL ERROR] The "backend" folder is missing! 
+    echo ==========================================
+    echo.
+    echo If you moved or copied out 'start.bat' to your Desktop, it will NOT work.
+    echo It must remain completely inside the folder with the rest of the code!
+    echo.
+    echo Solution:
+    echo 1. Move this file back into the OSOMNI project folder.
+    echo 2. If you want it on your Desktop, Right-Click start.bat -^> Create Shortcut, then move the shortcut.
+    echo.
+    pause
+    exit /b 1
+)
+
 echo This script will install dependencies, start the backend, and open the dashboard.
 
 echo.
