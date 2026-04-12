@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="bg-mesh"></div>
+    <div class="bg-glow"></div>
     <div id="toast-container"></div>
 
     <header class="header">
@@ -54,6 +56,10 @@
                     <div class="stat-header">
                         <h2>CPU</h2>
                         <span class="stat-value" id="val-cpu">0%</span>
+                    </div>
+                    <div class="cpu-details">
+                        <span>Cores: <strong id="val-cpu-cores">--/--</strong></span>
+                        <span>Freq: <strong id="val-cpu-freq">-- MHz</strong></span>
                     </div>
                     <div class="disk-info" id="cpu-status" style="margin-top: 0; margin-bottom: 10px; color: var(--accent); text-align: left;">Status: Checking...</div>
                     <div class="progress-bar" style="margin-bottom: 5px;"><div class="progress-fill" id="bar-cpu"></div></div>

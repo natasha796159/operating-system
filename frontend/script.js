@@ -18,6 +18,8 @@ let startTime = Date.now();
 
 // DOM Elements
 const eValCpu = document.getElementById('val-cpu');
+const eValCpuCores = document.getElementById('val-cpu-cores');
+const eValCpuFreq = document.getElementById('val-cpu-freq');
 const eBarCpu = document.getElementById('bar-cpu');
 const eGraphCpu = document.getElementById('graph-cpu');
 
@@ -129,11 +131,24 @@ function setupTheme() {
     document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
+let systemBootTime = null;
+
 function updateUptime() {
-    const diff = Math.floor((Date.now() - startTime) / 1000);
-    const m = Math.floor(diff / 60);
+    if (!systemBootTime) {
+        eUptime.textContent = `Uptime: Loading...`;
+        return;
+    }
+    const diff = Math.floor((Date.now() / 1000) - systemBootTime);
+    const d = Math.floor(diff / 86400);
+    const h = Math.floor((diff % 86400) / 3600);
+    const m = Math.floor((diff % 3600) / 60);
     const s = diff % 60;
-    eUptime.textContent = `Uptime: ${m}m ${s}s`;
+    
+    if (d > 0) {
+        eUptime.textContent = `OS Uptime: ${d}d ${h}h ${m}m ${s}s`;
+    } else {
+        eUptime.textContent = `OS Uptime: ${h}h ${m}m ${s}s`;
+    }
 }
 
 // Formatting Utils
@@ -183,11 +198,19 @@ function updateSystemUI(data) {
     else if(data.health_score < 80) hColor = 'var(--warning)';
     eHealthRing.style.background = `conic-gradient(${hColor} ${data.health_score}%, var(--bg-main) 0)`;
 
+    // Setup boot time if not set
+    if (data.system && data.system.boot_time && !systemBootTime) {
+        systemBootTime = data.system.boot_time;
+    }
+
     // CPU
     const cCpu = data.cpu.percent;
-    eValCpu.textContent = `CPU Usage: ${cCpu}%`;
+    eValCpu.textContent = `Usage: ${cCpu}%`;
     const ecStatus = document.getElementById('cpu-status');
     if (ecStatus) ecStatus.textContent = `Status: ${data.cpu.status}`;
+    
+    if (eValCpuCores) eValCpuCores.textContent = `${data.cpu.cores_physical} / ${data.cpu.cores_logical}`;
+    if (eValCpuFreq) eValCpuFreq.textContent = `${data.cpu.freq_current} MHz`;
     
     eBarCpu.style.width = `${cCpu}%`;
     eBarCpu.className = `progress-fill ${getColorClass(cCpu, 'cpu')}`;
@@ -221,10 +244,19 @@ function updateSystemUI(data) {
     updateGraph(netHistory, netPercent, eGraphNet, '');
 
     // Disk
-    const cDisk = data.disk.percent;
-    eValDisk.textContent = `${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)} (${cDisk}%)`;
-    eBarDisk.style.width = `${cDisk}%`;
-    eBarDisk.className = `progress-fill ${getColorClass(cDisk, 'disk')}`;
+    const cDiskActivity = data.disk.activity_percent || 0;
+    const cDiskCapacity = data.disk.percent || 0;
+    const readSpd = data.disk.read_speed || 0;
+    const writeSpd = data.disk.write_speed || 0;
+
+    eValDisk.textContent = `${cDiskActivity.toFixed(1)}% Active | ${formatBytes(readSpd)}/s R | ${formatBytes(writeSpd)}/s W`;
+    eBarDisk.style.width = `${cDiskActivity}%`;
+    eBarDisk.className = `progress-fill ${getColorClass(cDiskActivity, 'disk')}`;
+    
+    const infoDisk = document.querySelector('#card-disk .disk-info');
+    if (infoDisk) {
+        infoDisk.textContent = `Storage space: ${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)} (${cDiskCapacity}%) used`;
+    }
 
     checkAlerts(cCpu, truePercent);
 }
@@ -255,26 +287,42 @@ function updateGraph(historyArray, newValue, canvasElement, colorClass) {
     ctx.beginPath();
     const step = w / (historyArray.length - 1);
     
+    let region = new Path2D();
+    
     for (let i = 0; i < historyArray.length; i++) {
         const val = historyArray[i];
         const x = i * step;
         const y = h - (val / 100 * h); // scale to 0-100
         
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (i === 0) {
+            ctx.moveTo(x, y);
+            region.moveTo(x, y);
+        } else {
+            const prevX = (i - 1) * step;
+            const prevY = h - (historyArray[i - 1] / 100 * h);
+            const cpX = (prevX + x) / 2;
+            
+            ctx.bezierCurveTo(cpX, prevY, cpX, y, x, y);
+            region.bezierCurveTo(cpX, prevY, cpX, y, x, y);
+        }
     }
     
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = strokeColor;
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Fill area under curve
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fillStyle = strokeColor + '20'; // 20% opacity hex
-    ctx.fill();
+    // Fill area under curve with linear gradient
+    region.lineTo(w, h);
+    region.lineTo(0, h);
+    region.closePath();
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, strokeColor + '50'); // 31% opacity
+    gradient.addColorStop(1, strokeColor + '00'); // 0% opacity
+    
+    ctx.fillStyle = gradient;
+    ctx.fill(region);
 }
 
 // Process rendering

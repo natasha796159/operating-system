@@ -1,21 +1,34 @@
 import psutil
 import time
+import threading
+import datetime
+
+try:
+    SYSTEM_BOOT_TIME = psutil.boot_time()
+except Exception:
+    SYSTEM_BOOT_TIME = time.time()
 
 # Initialize CPU measurement globally before API starts
-psutil.cpu_percent(interval=None)
+latest_cpu_percent = 0.0
+
+def background_monitor():
+    global latest_cpu_percent
+    while True:
+        # Blocks for 1 second, providing exact real-time average like Task Manager
+        latest_cpu_percent = psutil.cpu_percent(interval=1)
+
+monitor_thread = threading.Thread(target=background_monitor, daemon=True)
+monitor_thread.start()
 
 last_net_io = psutil.net_io_counters()
+last_disk_io = psutil.disk_io_counters()
 last_net_time = time.time()
 
 def get_system_stats():
-    global last_net_io, last_net_time
+    global last_net_io, last_disk_io, last_net_time, latest_cpu_percent
     
-    # interval=None calculates CPU utilization since last call
-    cpu_percent = psutil.cpu_percent(interval=None)
-    
-    # Fallback to prevent 0.0% artifacts due to rapid concurrent API polling
-    if cpu_percent <= 0.0:
-        cpu_percent = psutil.cpu_percent(interval=0.1)
+    # Use the continuously updated true CPU percent
+    cpu_percent = latest_cpu_percent
         
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
@@ -29,19 +42,35 @@ def get_system_stats():
     true_used = total - available
     true_percent = (true_used / total) * 100
     
-    # Network Tracking
+    # Network and Disk Tracking
     current_net_io = psutil.net_io_counters()
+    current_disk_io = psutil.disk_io_counters()
     current_time = time.time()
     time_delta = current_time - last_net_time
     
     if time_delta > 0:
         upload_speed = (current_net_io.bytes_sent - last_net_io.bytes_sent) / time_delta
         download_speed = (current_net_io.bytes_recv - last_net_io.bytes_recv) / time_delta
+        
+        # Calculate Disk Active Time (I/O time vs Elapsed time)
+        read_time_diff = current_disk_io.read_time - last_disk_io.read_time
+        write_time_diff = current_disk_io.write_time - last_disk_io.write_time
+        active_ms = read_time_diff + write_time_diff
+        
+        disk_activity_percent = (active_ms / (time_delta * 1000)) * 100
+        disk_activity_percent = max(0.0, min(100.0, disk_activity_percent))
+        
+        disk_read_speed = (current_disk_io.read_bytes - last_disk_io.read_bytes) / time_delta
+        disk_write_speed = (current_disk_io.write_bytes - last_disk_io.write_bytes) / time_delta
     else:
         upload_speed = 0.0
         download_speed = 0.0
+        disk_activity_percent = 0.0
+        disk_read_speed = 0.0
+        disk_write_speed = 0.0
         
     last_net_io = current_net_io
+    last_disk_io = current_disk_io
     last_net_time = current_time
 
     # Primary Intelligent Health Score Math
@@ -75,10 +104,21 @@ def get_system_stats():
     else:
         cpu_status = "Normal usage"
         
+    try:
+        cpu_freq = psutil.cpu_freq()
+        freq_current = round(cpu_freq.current, 0) if cpu_freq else 0
+        freq_max = round(cpu_freq.max, 0) if cpu_freq else 0
+    except Exception:
+        freq_current, freq_max = 0, 0
+        
     return {
         "cpu": {
             "percent": cpu_percent,
-            "status": cpu_status
+            "status": cpu_status,
+            "cores_logical": psutil.cpu_count(logical=True),
+            "cores_physical": psutil.cpu_count(logical=False),
+            "freq_current": freq_current,
+            "freq_max": freq_max
         },
         "memory": {
             "total": total,
@@ -93,12 +133,18 @@ def get_system_stats():
         },
         "disk": {
             "percent": disk.percent,
+            "activity_percent": round(disk_activity_percent, 1),
+            "read_speed": disk_read_speed,
+            "write_speed": disk_write_speed,
             "used": disk.used,
             "total": disk.total
         },
         "network": {
             "upload_speed": upload_speed,
             "download_speed": download_speed
+        },
+        "system": {
+            "boot_time": SYSTEM_BOOT_TIME
         },
         "health_score": round(health_score, 0),
         "recommendation": recommendation
