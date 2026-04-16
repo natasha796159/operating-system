@@ -45,6 +45,23 @@ const eHealthScore = document.getElementById('health-score-val');
 const eHealthRing = document.getElementById('health-ring');
 const eRecommendation = document.getElementById('recommendation-text');
 
+// Energy & Auto Fix
+const eValEnergyWatts = document.getElementById('val-energy-watts');
+const eValEnergyPower = document.getElementById('val-energy-power');
+const eValEnergyCarbon = document.getElementById('val-energy-carbon');
+const eValEnergyEq = document.getElementById('val-energy-eq');
+const eValEnergyTotal = document.getElementById('val-energy-total');
+
+const eAutoFixMode = document.getElementById('auto-fix-mode');
+const eBtnOptimize = document.getElementById('btn-optimize-now');
+const eAutoFixLogs = document.getElementById('auto-fix-logs');
+
+// Top Processes Card
+const eTopProcessList = document.getElementById('top-processes-list');
+const eBtnSortCpu = document.getElementById('btn-sort-cpu');
+const eBtnSortMem = document.getElementById('btn-sort-mem');
+let topProcessSort = 'cpu';
+
 // Initialization
 function init() {
     setupTheme();
@@ -54,6 +71,7 @@ function init() {
     setInterval(fetchSystemStats, REFRESH_RATE);
     setInterval(fetchProcesses, REFRESH_RATE);
     setInterval(updateUptime, 1000);
+    setInterval(pollAutoFix, 10000);
 }
 
 // Event Listeners
@@ -100,7 +118,7 @@ function setupEventListeners() {
         const currentTh = document.documentElement.getAttribute('data-theme');
         const newTh = currentTh === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', newTh);
-        localStorage.setItem('omniwatch_theme', newTh);
+        localStorage.setItem('intellisys_theme', newTh);
     });
 
     // Speedtest Action
@@ -124,10 +142,95 @@ function setupEventListeners() {
             btnSpeed.disabled = false;
         });
     }
+
+    // Auto Fix Button
+    if (eBtnOptimize) {
+        eBtnOptimize.addEventListener('click', () => {
+            const mode = eAutoFixMode.value;
+            triggerAutoFix(mode === 'OFF' ? 'SUGGEST' : mode);
+        });
+    }
+
+    // Top Processes Filters
+    if (eBtnSortCpu && eBtnSortMem) {
+        eBtnSortCpu.addEventListener('click', () => {
+            topProcessSort = 'cpu';
+            eBtnSortCpu.style.borderColor = 'var(--accent)';
+            eBtnSortCpu.style.color = 'var(--accent)';
+            eBtnSortMem.style.borderColor = 'var(--border)';
+            eBtnSortMem.style.color = 'var(--text-muted)';
+            renderTopProcesses();
+        });
+        eBtnSortMem.addEventListener('click', () => {
+            topProcessSort = 'mem';
+            eBtnSortMem.style.borderColor = 'var(--accent)';
+            eBtnSortMem.style.color = 'var(--accent)';
+            eBtnSortCpu.style.borderColor = 'var(--border)';
+            eBtnSortCpu.style.color = 'var(--text-muted)';
+            renderTopProcesses();
+        });
+    }
+}
+
+// Auto Fix Engine Logic
+function addLogEntry(msg, type = '') {
+    if (!eAutoFixLogs) return;
+    const div = document.createElement('div');
+    div.className = `log-entry ${type}`;
+    const timeStr = new Date().toLocaleTimeString();
+    
+    // Add checkmark for success
+    let prefix = (type === 'success' || type === 'info') ? '✔ ' : '';
+    if (type === 'error') prefix = '✖ ';
+    
+    div.textContent = `[${timeStr}] ${prefix}${msg}`;
+    eAutoFixLogs.appendChild(div);
+    eAutoFixLogs.scrollTop = eAutoFixLogs.scrollHeight;
+    
+    while(eAutoFixLogs.children.length > 50) {
+        eAutoFixLogs.firstChild.remove();
+    }
+}
+
+async function triggerAutoFix(mode) {
+    if (!eBtnOptimize) return;
+    eBtnOptimize.disabled = true;
+    eBtnOptimize.textContent = "Optimizing...";
+    try {
+        const res = await fetch('/api/auto-fix', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ mode: mode })
+        });
+        const data = await res.json();
+        
+        if (data.actions && data.actions.length > 0) {
+            data.actions.forEach(action => {
+                let type = 'success';
+                let lower = action.toLowerCase();
+                if(lower.includes("failed") || lower.includes("error") || lower.includes("off")) type = 'error';
+                else if(lower.includes("stable") || lower.includes("no safe") || lower.includes("suggest") || lower.includes("action needed")) type = 'info';
+                
+                addLogEntry(action, type);
+            });
+        }
+    } catch(err) {
+        addLogEntry("Failed to connect to optimization engine", "error");
+    }
+    eBtnOptimize.textContent = "Optimize Now";
+    eBtnOptimize.disabled = false;
+    
+    fetchProcesses();
+}
+
+function pollAutoFix() {
+    if (eAutoFixMode && eAutoFixMode.value === "AUTO") {
+        triggerAutoFix("AUTO");
+    }
 }
 
 function setupTheme() {
-    const savedTheme = localStorage.getItem('omniwatch_theme') || 'dark';
+    const savedTheme = localStorage.getItem('intellisys_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
@@ -183,6 +286,7 @@ async function fetchProcesses() {
         const res = await fetch('/api/processes');
         processData = await res.json();
         renderTable();
+        renderTopProcesses();
     } catch (err) {
         console.error("Process Fetch Error:", err);
     }
@@ -256,6 +360,14 @@ function updateSystemUI(data) {
     const infoDisk = document.querySelector('#card-disk .disk-info');
     if (infoDisk) {
         infoDisk.textContent = `Storage space: ${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)} (${cDiskCapacity}%) used`;
+    }
+
+    if (data.energy) {
+        if(eValEnergyWatts) eValEnergyWatts.textContent = `${data.energy.power_watts}W`;
+        if(eValEnergyPower) eValEnergyPower.textContent = `${data.energy.power_watts} W`;
+        if(eValEnergyCarbon) eValEnergyCarbon.textContent = `${data.energy.carbon_kg} kg CO₂`;
+        if(eValEnergyEq) eValEnergyEq.textContent = data.energy.equivalent;
+        if(eValEnergyTotal) eValEnergyTotal.textContent = `${data.energy.energy_kwh} kWh`;
     }
 
     checkAlerts(cCpu, truePercent);
@@ -375,6 +487,49 @@ function renderTable() {
 
     eProcessList.innerHTML = '';
     eProcessList.appendChild(fragment);
+}
+
+function renderTopProcesses() {
+    if (!eTopProcessList || !processData.length) return;
+    
+    // Sort logic
+    let sorted = [...processData].sort((a, b) => {
+        let valA = topProcessSort === 'cpu' ? (a.cpu_percent || 0) : (a.memory_percent || 0);
+        let valB = topProcessSort === 'cpu' ? (b.cpu_percent || 0) : (b.memory_percent || 0);
+        return valB - valA;
+    });
+    
+    const top5 = sorted.slice(0, 5);
+    
+    eTopProcessList.innerHTML = '';
+    
+    top5.forEach(p => {
+        let cpu = (p.cpu_percent || 0).toFixed(1);
+        let mem = (p.memory_percent || 0).toFixed(1);
+        
+        // For memory progress bar, assume system has 100% capacity and it shows percent directly
+        let val = topProcessSort === 'cpu' ? p.cpu_percent : p.memory_percent;
+        
+        let colorClass = 'var(--success)';
+        if (val > 70) colorClass = 'var(--danger)';
+        else if (val > 30) colorClass = 'var(--warning)';
+        
+        let width = Math.min(100, val || 0);
+        if (width < 3) width = 3; // ensure minimum visibility
+        
+        const row = document.createElement('div');
+        row.className = 'top-process-row';
+        row.innerHTML = `
+            <div class="top-process-header">
+                <span class="top-process-name">${p.name || 'Unknown'} (PID: ${p.pid})</span>
+                <span class="top-process-stats">${cpu}% CPU | ${mem}% RAM</span>
+            </div>
+            <div class="top-process-bar-bg">
+                <div class="top-process-bar-fill" style="width: ${width}%; background-color: ${colorClass}; box-shadow: 0 0 8px ${colorClass}"></div>
+            </div>
+        `;
+        eTopProcessList.appendChild(row);
+    });
 }
 
 // action handlers

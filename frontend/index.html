@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniWatch | Task Manager</title>
+    <title>IntelliSys | Task Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +15,7 @@
     <header class="header">
         <div class="logo">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <h1>OmniWatch Base</h1>
+            <h1>IntelliSys Base</h1>
         </div>
         
         <nav class="tabs-nav">
@@ -107,11 +107,56 @@
                     <div class="progress-bar"><div class="progress-fill" id="bar-disk"></div></div>
                     <div class="disk-info">Monitoring root filesystem</div>
                 </div>
+
+                <!-- Energy Card -->
+                <div class="stat-card" id="card-energy">
+                    <div class="stat-header">
+                        <h2>Energy Impact</h2>
+                        <span class="stat-value" id="val-energy-watts" style="color: var(--success);">0W</span>
+                    </div>
+                    <div class="memory-details" style="margin-top: 15px;">
+                        <div class="mem-row"><span>⚡ Power Usage:</span> <strong id="val-energy-power">0 W</strong></div>
+                        <div class="mem-row"><span>🌱 Carbon Emission:</span> <strong id="val-energy-carbon">0 kg CO₂</strong></div>
+                        <div class="mem-row"><span>📱 Equivalent:</span> <strong id="val-energy-eq">0 phone charges</strong></div>
+                        <div class="mem-row"><span>📊 Session Energy:</span> <strong id="val-energy-total">0 kWh</strong></div>
+                    </div>
+                </div>
+
+                <!-- Top Processes Card -->
+                <div class="stat-card" id="card-top-processes">
+                    <div class="stat-header" style="margin-bottom: 0.5rem;">
+                        <h2 style="display: flex; align-items: center; gap: 0.5rem;">⚙️ Top Processes</h2>
+                        <div class="filter-toggle" style="font-size: 0.75rem; display: flex; gap: 0.25rem;">
+                            <button id="btn-sort-cpu" class="btn-kill" style="padding: 0.2rem 0.5rem; border-color: var(--accent); color: var(--accent);">CPU</button>
+                            <button id="btn-sort-mem" class="btn-kill" style="padding: 0.2rem 0.5rem; border-color: var(--border); color: var(--text-muted);">Memory</button>
+                        </div>
+                    </div>
+                    <div id="top-processes-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                        <!-- JS injected -->
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- Processes Tab -->
         <section id="tab-processes" class="tab-content" style="display: none;">
+            <div class="process-section" style="margin-bottom: 1.5rem;">
+                <div class="process-header" style="margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <h2>Auto Fix Engine</h2>
+                        <select id="auto-fix-mode" class="energy-select">
+                            <option value="OFF">Mode: OFF</option>
+                            <option value="SUGGEST" selected>Mode: SUGGEST</option>
+                            <option value="AUTO">Mode: AUTO</option>
+                        </select>
+                    </div>
+                    <button id="btn-optimize-now" class="btn-kill" style="border-color: var(--accent); color: var(--text-main);">Optimize Now</button>
+                </div>
+                <div class="log-panel" id="auto-fix-logs">
+                    <div class="log-entry" style="color: var(--text-muted)">System optimization engine standing by...</div>
+                </div>
+            </div>
+
             <div class="process-section">
                 <div class="process-header">
                     <h2>Running Processes (<span id="proc-count">0</span>)</h2>

@@ -1,4 +1,4 @@
-# OmniWatch: Real-Time Process Monitoring Dashboard 🚀
+# IntelliSys: Real-Time Process Monitoring Dashboard 🚀
 
 A lightweight, dependency-free (frontend), real-time system monitoring utility designed to evaluate CPU, memory, Disk, and Running Processes directly from your browser. 
 
@@ -59,7 +59,7 @@ python app.py
 ```
 
 **3. Open Browser**
-Navigate to `http://127.0.0.1:5000` to view OmniWatch.
+Navigate to `http://127.0.0.1:5000` to view IntelliSys.
 
 ---
 

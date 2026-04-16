@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 echo ==========================================
-echo    OmniWatch - Process Dashboard
+echo    IntelliSys - Process Dashboard
 echo ==========================================
 
 IF NOT EXIST "backend\requirements.txt" (
@@ -35,7 +35,7 @@ if %errorlevel% neq 0 (
 echo.
 echo [2/3] Starting Backend Server...
 :: Start the flask app in a separate minimized window
-start "OmniWatch Backend" /MIN python backend\app.py
+start "IntelliSys Backend" /MIN python backend\app.py
 
 echo.
 echo [3/3] Opening Dashboard...

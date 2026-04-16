@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from system_monitor import get_system_stats
 from process_handler import get_all_processes, kill_process
+from auto_fix_engine import auto_fix
 import os
 import psutil
 
@@ -63,6 +64,16 @@ def api_kill(pid):
         return jsonify(result), 200
     else:
         return jsonify(result), 400
+
+@app.route('/api/auto-fix', methods=['POST'])
+def api_auto_fix():
+    data = request.json or {}
+    mode = data.get('mode', 'SUGGEST')
+    processes = get_all_processes()
+    cpu = psutil.cpu_percent(interval=None)
+    memory_available = psutil.virtual_memory().available
+    actions = auto_fix(mode, processes, cpu, memory_available)
+    return jsonify({'actions': actions})
 
 if __name__ == '__main__':
     # Host on localhost only for security

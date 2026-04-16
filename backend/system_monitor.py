@@ -2,6 +2,7 @@ import psutil
 import time
 import threading
 import datetime
+from energy_monitor import update_energy, get_energy_stats
 
 try:
     SYSTEM_BOOT_TIME = psutil.boot_time()
@@ -16,6 +17,12 @@ def background_monitor():
     while True:
         # Blocks for 1 second, providing exact real-time average like Task Manager
         latest_cpu_percent = psutil.cpu_percent(interval=1)
+        
+        try:
+            mem_percent = psutil.virtual_memory().percent
+            update_energy(latest_cpu_percent, mem_percent)
+        except:
+            pass
 
 monitor_thread = threading.Thread(target=background_monitor, daemon=True)
 monitor_thread.start()
@@ -74,7 +81,12 @@ def get_system_stats():
     last_net_time = current_time
 
     # Primary Intelligent Health Score Math
-    health_score = 100 - (cpu_percent * 0.4 + true_percent * 0.4 + disk.percent * 0.2)
+    # Penalize only when metrics exceed safe thresholds to prevent stable systems showing as "Red"
+    cpu_penalty = max(0, cpu_percent - 50) * 1.5
+    ram_penalty = max(0, true_percent - 60) * 1.5
+    disk_penalty = max(0, disk.percent - 85) * 4.0
+    
+    health_score = 100 - (cpu_penalty + ram_penalty + disk_penalty)
     health_score = max(0, min(100, health_score)) # Clamp between 0-100
     
     # Semantic Recommendation Engine
@@ -146,6 +158,7 @@ def get_system_stats():
         "system": {
             "boot_time": SYSTEM_BOOT_TIME
         },
+        "energy": get_energy_stats(),
         "health_score": round(health_score, 0),
         "recommendation": recommendation
     }
